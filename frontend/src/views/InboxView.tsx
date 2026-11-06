@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Mail, CheckCircle2, AlertCircle, Sparkles, ChevronDown, ChevronRight, FileText, User, Plus, X, UploadCloud, FileCheck } from 'lucide-react';
+import React, { useState, useRef, useMemo } from 'react';
+import { Mail, CheckCircle2, AlertCircle, Sparkles, ChevronDown, ChevronRight, FileText, User, Plus, X, UploadCloud, FileCheck, Search, Filter, ArrowUpDown } from 'lucide-react';
 import { EmailAnalysis, SourceMessage } from '../types';
 import { api } from '../api/client';
 
@@ -14,6 +14,11 @@ export const InboxView: React.FC<InboxViewProps> = ({ emails, onRefresh }) => {
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [showQuoted, setShowQuoted] = useState(false);
   const [showCompose, setShowCompose] = useState(false);
+  // Search, Filter, Sort State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('ALL');
+  const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const [sortBy, setSortBy] = useState<'NEWEST' | 'OLDEST' | 'PRIORITY'>('NEWEST');
 
   // Compose Form State
   const [composeSubject, setComposeSubject] = useState('');
@@ -124,6 +129,71 @@ export const InboxView: React.FC<InboxViewProps> = ({ emails, onRefresh }) => {
     }
   };
 
+  // Filtered and sorted emails
+  const filteredEmails = useMemo(() => {
+    let result = [...emails];
+
+    // Search query filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter((msg: SourceMessage) => {
+        const subjectMatch = msg.subject?.toLowerCase().includes(q);
+        const senderMatch =
+          msg.sender_display_name?.toLowerCase().includes(q) ||
+          msg.sender_address?.toLowerCase().includes(q);
+        const bodyMatch =
+          msg.body_preprocessed?.toLowerCase().includes(q) ||
+          msg.body_text?.toLowerCase().includes(q);
+        const refMatch = msg.latest_analysis?.raw_structured_output?.references?.some((r: any) =>
+          r.value?.toLowerCase().includes(q) || r.type?.toLowerCase().includes(q)
+        );
+        return Boolean(subjectMatch || senderMatch || bodyMatch || refMatch);
+      });
+    }
+
+    // Department filter
+    if (departmentFilter !== 'ALL') {
+      result = result.filter(
+        (msg: SourceMessage) =>
+          msg.latest_analysis?.department?.toUpperCase() === departmentFilter.toUpperCase()
+      );
+    }
+
+    // Priority filter
+    if (priorityFilter !== 'ALL') {
+      result = result.filter(
+        (msg: SourceMessage) =>
+          msg.latest_analysis?.priority?.toUpperCase() === priorityFilter.toUpperCase()
+      );
+    }
+
+    // Sorting
+    const priorityWeight: Record<string, number> = {
+      CRITICAL: 4,
+      HIGH: 3,
+      NORMAL: 2,
+      LOW: 1,
+    };
+
+    result.sort((a: SourceMessage, b: SourceMessage) => {
+      if (sortBy === 'PRIORITY') {
+        const pA = priorityWeight[a.latest_analysis?.priority?.toUpperCase() || ''] || 0;
+        const pB = priorityWeight[b.latest_analysis?.priority?.toUpperCase() || ''] || 0;
+        if (pA !== pB) return pB - pA;
+      }
+
+      const dateA = a.sent_at ? new Date(a.sent_at).getTime() : 0;
+      const dateB = b.sent_at ? new Date(b.sent_at).getTime() : 0;
+
+      if (sortBy === 'OLDEST') {
+        return dateA - dateB;
+      }
+      return dateB - dateA; // Default NEWEST
+    });
+
+    return result;
+  }, [emails, searchQuery, departmentFilter, priorityFilter, sortBy]);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-8rem)]">
       {/* Left Column: Email List */}
@@ -162,11 +232,73 @@ export const InboxView: React.FC<InboxViewProps> = ({ emails, onRefresh }) => {
           </div>
         </div>
 
+        {/* Filter and Search Bar */}
+        <div className="p-2.5 border-b border-slate-200 bg-white space-y-2">
+          {/* Search Box */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+            <input
+              type="text"
+              placeholder="Search by SO, Part, sender, subject..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full text-xs pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 text-xs"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Filter Pills / Dropdowns */}
+          <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded px-1.5 py-1 text-slate-700 font-medium focus:outline-none"
+            >
+              <option value="ALL">All Depts</option>
+              <option value="SALES">Sales</option>
+              <option value="PURCHASE">Purchase</option>
+              <option value="PPC">PPC</option>
+              <option value="PRODUCTION">Production</option>
+              <option value="QUALITY">Quality</option>
+              <option value="DISPATCH">Dispatch</option>
+            </select>
+
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded px-1.5 py-1 text-slate-700 font-medium focus:outline-none"
+            >
+              <option value="ALL">All Priority</option>
+              <option value="CRITICAL">Critical</option>
+              <option value="HIGH">High</option>
+              <option value="NORMAL">Normal</option>
+              <option value="LOW">Low</option>
+            </select>
+
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-slate-50 border border-slate-200 rounded px-1.5 py-1 text-slate-700 font-medium focus:outline-none"
+            >
+              <option value="NEWEST">Newest</option>
+              <option value="OLDEST">Oldest</option>
+              <option value="PRIORITY">By Priority</option>
+            </select>
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-          {emails.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-400">No emails ingested yet.</div>
+          {filteredEmails.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400">{emails.length === 0 ? 'No emails ingested yet.' : 'No emails match your search or filter criteria.'}</div>
           ) : (
-            emails.map((msg) => {
+            filteredEmails.map((msg) => {
               const isSelected = selectedEmail?.id === msg.id;
               return (
                 <div
