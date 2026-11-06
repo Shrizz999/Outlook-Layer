@@ -10,18 +10,36 @@ interface InboxViewProps {
 
 export const InboxView: React.FC<InboxViewProps> = ({ emails, onRefresh }) => {
   const [selectedEmail, setSelectedEmail] = useState<SourceMessage | null>(emails[0] || null);
-  const [analysis, setAnalysis] = useState<EmailAnalysis | null>(null);
+  const [analysis, setAnalysis] = useState<EmailAnalysis | null>(emails[0]?.latest_analysis || null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [showQuoted, setShowQuoted] = useState(false);
 
+  // If emails list updates and selected email exists, sync latest analysis
+  React.useEffect(() => {
+    if (emails.length > 0 && !selectedEmail) {
+      setSelectedEmail(emails[0]);
+      setAnalysis(emails[0].latest_analysis || null);
+    } else if (selectedEmail) {
+      const updated = emails.find((e) => e.id === selectedEmail.id);
+      if (updated && updated.latest_analysis && !analysis) {
+        setAnalysis(updated.latest_analysis);
+      }
+    }
+  }, [emails]);
+
   const handleSelectEmail = async (msg: SourceMessage) => {
     setSelectedEmail(msg);
+    if (msg.latest_analysis) {
+      setAnalysis(msg.latest_analysis);
+    }
     setLoadingAnalysis(true);
     try {
       const res = await api.getEmailAnalysis(msg.id);
       setAnalysis(res);
     } catch {
-      setAnalysis(null);
+      if (!msg.latest_analysis) {
+        setAnalysis(null);
+      }
     } finally {
       setLoadingAnalysis(false);
     }
@@ -83,19 +101,62 @@ export const InboxView: React.FC<InboxViewProps> = ({ emails, onRefresh }) => {
                   <p className="text-[11px] text-slate-500 line-clamp-2">
                     {msg.body_preprocessed || msg.body_text}
                   </p>
-                  <div className="mt-2 flex items-center space-x-1.5">
-                    <span
-                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                        msg.processing_status === 'ANALYSED'
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : msg.processing_status === 'NEEDS_REVIEW'
-                          ? 'bg-amber-50 text-amber-700'
-                          : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {msg.processing_status}
-                    </span>
-                  </div>
+                  {/* Findings chips badge row right where analysed was */}
+                  {msg.latest_analysis ? (
+                    <div className="mt-2.5 pt-2 border-t border-slate-100/80 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200/60 uppercase">
+                          {msg.latest_analysis.department || 'GENERAL'}
+                        </span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                          {msg.latest_analysis.intent || 'INQUIRY'}
+                        </span>
+                        <span
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                            msg.latest_analysis.priority === 'CRITICAL' || msg.latest_analysis.priority === 'HIGH'
+                              ? 'bg-red-50 text-red-700 border border-red-200/60'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {msg.latest_analysis.priority}
+                        </span>
+                        {msg.latest_analysis.confidence && (
+                          <span className="text-[9px] font-semibold text-slate-400 ml-auto">
+                            {Math.round(msg.latest_analysis.confidence * 100)}% conf
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Extracted References (SO / Part numbers) */}
+                      {msg.latest_analysis.raw_structured_output?.references &&
+                        msg.latest_analysis.raw_structured_output.references.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {msg.latest_analysis.raw_structured_output.references.slice(0, 3).map((ref, idx) => (
+                              <span
+                                key={idx}
+                                className="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-800 border border-slate-200/80"
+                              >
+                                {ref.type}: {ref.value}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                    </div>
+                  ) : (
+                    <div className="mt-2 flex items-center space-x-1.5">
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                          msg.processing_status === 'ANALYSED'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : msg.processing_status === 'NEEDS_REVIEW'
+                            ? 'bg-amber-50 text-amber-700'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {msg.processing_status}
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })

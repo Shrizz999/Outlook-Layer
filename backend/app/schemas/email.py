@@ -45,6 +45,7 @@ class SourceMessageRead(SourceMessageBase):
     internet_message_id: str | None = None
     body_preprocessed: str | None = None
     processing_status: str
+    latest_analysis: EmailAnalysisRead | None = None
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)

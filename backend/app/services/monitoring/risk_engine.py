@@ -60,6 +60,7 @@ class MonitoringRiskEngine:
 
         if available < required:
             shortage = required - available
+            shortage_display = int(shortage) if float(shortage).is_integer() else shortage
             dedup_key = f"SHORTAGE_{so.so_number}_{part_number}"
             alert = await self._alert_repo.create_or_update_alert(
                 MonitoringAlertCreate(
@@ -67,7 +68,7 @@ class MonitoringRiskEngine:
                     severity=Priority.HIGH.value,
                     business_case_id=business_case_id,
                     so_id=so.id,
-                    description=f"Material shortage of {shortage} units detected for part {part_number} on {so.so_number} (Required: {required}, Available: {available})",
+                    description=f"Material shortage of {shortage_display} units detected for part {part_number} on {so.so_number} (Required: {required}, Available: {available})",
                     evidence={
                         "so_number": so.so_number,
                         "part_number": part_number,
@@ -75,7 +76,7 @@ class MonitoringRiskEngine:
                         "available_stock": float(available),
                         "shortage_quantity": float(shortage),
                     },
-                    suggested_action=f"Release Purchase Order for {shortage} units of {part_number}",
+                    suggested_action=f"Release Purchase Order for {shortage_display} units of {part_number}",
                     dedup_key=dedup_key,
                 )
             )

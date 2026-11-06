@@ -10,6 +10,7 @@ from app.integrations.email_providers.fixture_provider import RawMessage
 from app.repositories.email_repo import EmailRepository
 from app.schemas.email import EmailRecipient, SourceMessageCreate, SourceMessageRead
 from app.services.email.preprocessor import EmailPreprocessor
+from app.services.intelligence.analyser import EmailAnalysisService
 
 logger = structlog.get_logger(__name__)
 
@@ -23,13 +24,15 @@ class IngestionResult:
 
 
 class EmailIngestionService:
-    def __init__(self, email_repo: EmailRepository | None = None) -> None:
+    def __init__(self, email_repo: EmailRepository | None = None, auto_analyse: bool = True) -> None:
         self._repo = email_repo or EmailRepository()
         self._preprocessor = EmailPreprocessor()
+        self._auto_analyse = auto_analyse
+        self._analyser = EmailAnalysisService(email_repo=self._repo) if auto_analyse else None
 
     async def ingest_raw_message(self, mailbox_id: UUID, raw: RawMessage) -> tuple[SourceMessageRead | None, bool]:
         """
-        Ingest a single raw message.
+        Ingest a single raw message and automatically run AI analysis.
         Returns (SourceMessageRead, is_duplicate).
         """
         log = logger.bind(mailbox_id=str(mailbox_id), provider_id=raw.provider_message_id)
@@ -86,6 +89,16 @@ class EmailIngestionService:
 
         msg = await self._repo.create_source_message(create_data)
         log.info("Message ingested successfully", message_id=str(msg.id))
+
+        # Auto-trigger AI analysis on incoming messages
+        if self._auto_analyse and self._analyser:
+            try:
+                log.info("Auto-triggering AI analysis on newly ingested message", message_id=str(msg.id))
+                analysis = await self._analyser.analyse_message(msg)
+                msg.latest_analysis = analysis
+            except Exception as e:
+                log.warning("Auto-analysis failed during ingestion", error=str(e), message_id=str(msg.id))
+
         return msg, False
 
     async def ingest_batch(self, mailbox_id: UUID, raw_messages: list[RawMessage]) -> IngestionResult:

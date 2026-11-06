@@ -43,6 +43,7 @@ export interface SourceMessage {
   signature_text?: string;
   processing_status: string;
   has_attachments: boolean;
+  latest_analysis?: EmailAnalysis;
 }
 
 export interface EmailAnalysis {

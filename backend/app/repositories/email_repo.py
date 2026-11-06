@@ -124,13 +124,36 @@ class EmailRepository:
             if status:
                 q = q.eq("processing_status", status)
             res = q.range(offset, offset + limit - 1).order("sent_at", desc=True).execute()
-            return [SourceMessageRead(**row) for row in res.data]
+            
+            # Fetch latest analysis for each message
+            msg_ids = [row["id"] for row in res.data]
+            analysis_map: dict[str, EmailAnalysisRead] = {}
+            if msg_ids:
+                try:
+                    res_a = self._client.table("bi_email_analyses").select("*").in_("source_message_id", msg_ids).order("processed_at", desc=True).execute()
+                    for a_row in res_a.data:
+                        s_id = str(a_row["source_message_id"])
+                        if s_id not in analysis_map:
+                            analysis_map[s_id] = EmailAnalysisRead(**a_row)
+                except Exception:
+                    pass
 
-        results = [
-            SourceMessageRead(**msg)
-            for msg in self._store.bi_source_messages.values()
-            if not status or msg["processing_status"] == status
-        ]
+            return [
+                SourceMessageRead(**{**row, "latest_analysis": analysis_map.get(str(row["id"]))})
+                for row in res.data
+            ]
+
+        results = []
+        for msg in self._store.bi_source_messages.values():
+            if not status or msg["processing_status"] == status:
+                # find analysis
+                a_match = None
+                for a in self._store.bi_email_analyses.values():
+                    if str(a["source_message_id"]) == str(msg["id"]):
+                        a_match = EmailAnalysisRead(**a)
+                        break
+                results.append(SourceMessageRead(**{**msg, "latest_analysis": a_match}))
+
         results.sort(key=lambda x: x.sent_at or datetime.min.replace(tzinfo=UTC), reverse=True)
         return results[offset : offset + limit]
 

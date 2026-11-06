@@ -12,24 +12,41 @@ export const SmartDraftsView: React.FC<SmartDraftsViewProps> = ({ cases }) => {
   const [copied, setCopied] = useState(false);
 
   const selectedCase = cases.find((c) => c.id === selectedCaseId) || cases[0];
+  const caseRef = selectedCase?.case_number || 'CASE-2026-00001';
+  const caseTitle = selectedCase?.title || 'Order Coordination';
 
-  const draftSubject = `Delivery Status Clarification — Part HT-2045 (Ref: SO-1025)`;
-  const draftBody = `Dear Apex Tube Mills Team,
+  // Compute dynamic template drafts based on selected template category and target business case
+  const getDraftContent = () => {
+    switch (template) {
+      case 'CUSTOMER_ENQUIRY_ACK':
+        return {
+          subject: `Order Confirmation & Delivery Schedule — Ref: ${caseRef}`,
+          body: `Dear Customer Team,\n\nThank you for placing your order with Balbird. We are pleased to acknowledge receipt and confirmation regarding:\n- Case Reference: ${caseRef}\n- Scope: ${caseTitle}\n- Current Status: Production Planning & Scheduling Initiated\n\nOur engineering and production control teams are preparing the manufacturing timeline. We will furnish the confirmed dispatch date within 24 hours.\n\nThank you for your valued partnership.\n\nKind regards,\nCommercial & Sales Team\nBalbird Intelligence Integration`,
+          recipient: 'orders@acme-eng.invalid',
+          warning: 'Ensure delivery date matches MRP confirmed schedule before sending.',
+        };
+      case 'PPC_SCHEDULE_REQUEST':
+        return {
+          subject: `[Internal PPC Action] Machine Loading & Priority Clearance — ${caseRef}`,
+          body: `Hi Production Planning & Control Team,\n\nPlease review the production queue and slot priority for:\n- Case Number: ${caseRef}\n- Details: ${caseTitle}\n- Shortage Clearance: Procurement follow-up in progress for raw materials\n\nPlease confirm line capacity and target completion date for assembly.\n\nRegards,\nOperations Coordination Desk\nBalbird Intelligence`,
+          recipient: 'ppc-planning@balbird.internal',
+          warning: 'Internal correspondence only. Double-check line availability in daily roster.',
+        };
+      case 'SUPPLIER_DELIVERY_FOLLOWUP':
+      default:
+        return {
+          subject: `Delivery Status Clarification — Part HT-2045 (Ref: SO-1025 / ${caseRef})`,
+          body: `Dear Apex Tube Mills Team,\n\nWe are following up regarding the delivery schedule for our purchase order associated with ${caseRef}:\n- Part Number: HT-2045 (Hydraulic Tube 20x4.5mm)\n- Required Quantity: 40 MTR (Deficit clearance for SO-1025)\n\nCould you please confirm the scheduled dispatch date and share the airway bill or dispatch tracking reference once released?\n\nThank you for your assistance.\n\nKind regards,\nProcurement & Supply Chain Team\nBalbird Intelligence Integration`,
+          recipient: 'sales@apextubes.invalid',
+          warning: 'Smart Drafts never invent prices, quantities, or promise dates not backed by operational evidence.',
+        };
+    }
+  };
 
-We are following up regarding the delivery schedule for our purchase of:
-- Part Number: HT-2045 (Hydraulic Tube 20x4.5mm)
-- Quantity: 40 MTR (Balance for SO-1025)
-
-Could you please confirm the scheduled dispatch date and share the airway bill or dispatch tracking reference once released?
-
-Thank you for your assistance.
-
-Kind regards,
-Procurement & Supply Chain Team
-Balbird Intelligence Integration`;
+  const currentDraft = getDraftContent();
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(`Subject: ${draftSubject}\n\n${draftBody}`);
+    navigator.clipboard.writeText(`Subject: ${currentDraft.subject}\n\n${currentDraft.body}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -89,7 +106,7 @@ Balbird Intelligence Integration`;
               <span>Safety Enforcement</span>
             </div>
             <p className="text-[11px] leading-relaxed">
-              Smart Drafts never invent prices, quantities, or promise dates not backed by operational evidence.
+              {currentDraft.warning}
             </p>
           </div>
         </div>
@@ -112,21 +129,21 @@ Balbird Intelligence Integration`;
               <div>
                 <label className="text-[10px] uppercase font-bold text-slate-400">Subject</label>
                 <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800">
-                  {draftSubject}
+                  {currentDraft.subject}
                 </div>
               </div>
 
               <div>
                 <label className="text-[10px] uppercase font-bold text-slate-400">Body</label>
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg whitespace-pre-line text-slate-800 leading-relaxed font-sans min-h-[220px]">
-                  {draftBody}
+                  {currentDraft.body}
                 </div>
               </div>
             </div>
           </div>
 
           <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-400">
-            <span>Recipient: sales@apextubes.invalid</span>
+            <span>Recipient: {currentDraft.recipient}</span>
             <span className="font-semibold text-slate-500">Human Approval Required</span>
           </div>
         </div>
