@@ -1,0 +1,306 @@
+"""
+Balbird Intelligence Backend — Domain Enumerations
+Centralised controlled vocabulary. All status values, types, and categories.
+"""
+from enum import Enum
+
+
+# ---- AI / Analysis ----
+
+class AIProvider(str, Enum):
+    MOCK = "mock"
+    OPENROUTER = "openrouter"
+    UNAVAILABLE = "unavailable"
+
+
+class AnalysisValidationStatus(str, Enum):
+    UNREVIEWED = "UNREVIEWED"
+    ACCEPTED_AUTO = "ACCEPTED_AUTO"
+    ACCEPTED_HUMAN = "ACCEPTED_HUMAN"
+    REJECTED_HUMAN = "REJECTED_HUMAN"
+    NEEDS_REVIEW = "NEEDS_REVIEW"
+    SUPERSEDED = "SUPERSEDED"
+
+
+# ---- Email / Messages ----
+
+class MessageProcessingStatus(str, Enum):
+    PENDING = "PENDING"
+    PREPROCESSING = "PREPROCESSING"
+    PREPROCESSED = "PREPROCESSED"
+    QUEUED_FOR_ANALYSIS = "QUEUED_FOR_ANALYSIS"
+    ANALYSING = "ANALYSING"
+    ANALYSED = "ANALYSED"
+    NEEDS_REVIEW = "NEEDS_REVIEW"
+    ANALYSIS_FAILED = "ANALYSIS_FAILED"
+    WAITING_FOR_PROVIDER_QUOTA = "WAITING_FOR_PROVIDER_QUOTA"
+    DEAD_LETTER = "DEAD_LETTER"
+    SKIPPED = "SKIPPED"
+
+
+class EmailProvider(str, Enum):
+    FIXTURE = "FIXTURE"
+    MICROSOFT_GRAPH = "MICROSOFT_GRAPH"
+
+
+# ---- Business Cases ----
+
+class CaseType(str, Enum):
+    ENQUIRY = "ENQUIRY"
+    RFQ = "RFQ"
+    ORDER = "ORDER"
+    PROJECT = "PROJECT"
+    ISSUE = "ISSUE"
+    OTHER = "OTHER"
+
+
+class CaseStatus(str, Enum):
+    NEW = "NEW"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    ACTIVE = "ACTIVE"
+    WAITING_CUSTOMER = "WAITING_CUSTOMER"
+    WAITING_SUPPLIER = "WAITING_SUPPLIER"
+    WAITING_INTERNAL = "WAITING_INTERNAL"
+    AT_RISK = "AT_RISK"
+    ON_HOLD = "ON_HOLD"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    ARCHIVED = "ARCHIVED"
+
+
+# ---- Tasks ----
+
+class TaskProposalStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    MERGED = "MERGED"
+    SUPERSEDED = "SUPERSEDED"
+
+
+class TaskStatus(str, Enum):
+    """Status values compatible with existing tasks.status text field."""
+    PROPOSED = "PROPOSED"            # Pre-approval (bi_task_proposals only)
+    PENDING_ASSIGNMENT = "pending_assignment"
+    ASSIGNED = "assigned"
+    IN_PROGRESS = "in_progress"
+    WAITING = "waiting"
+    BLOCKED = "blocked"
+    COMPLETED_REPORTED = "completed_reported"
+    COMPLETED_VERIFIED = "completed_verified"
+    CANCELLED = "cancelled"
+    REOPENED = "reopened"
+
+
+class TaskVerificationStatus(str, Enum):
+    UNVERIFIED = "UNVERIFIED"
+    VERIFIED = "VERIFIED"
+    DISPUTED = "DISPUTED"
+    REOPENED = "REOPENED"
+
+
+# ---- Dependencies ----
+
+class DependencyType(str, Enum):
+    BLOCKS = "BLOCKS"
+    DEPENDS_ON = "DEPENDS_ON"
+    RELATED_TO = "RELATED_TO"
+    WAITING_FOR_EXTERNAL = "WAITING_FOR_EXTERNAL"
+    FINISH_TO_START = "FINISH_TO_START"
+    START_TO_START = "START_TO_START"
+    FINISH_TO_FINISH = "FINISH_TO_FINISH"
+    REQUIRES_APPROVAL = "REQUIRES_APPROVAL"
+    REQUIRES_MATERIAL = "REQUIRES_MATERIAL"
+    REQUIRES_QC = "REQUIRES_QC"
+
+
+class DependencyStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    SATISFIED = "SATISFIED"
+    REMOVED = "REMOVED"
+    BYPASSED = "BYPASSED"
+
+
+# ---- Orders ----
+
+class SOStatus(str, Enum):
+    DRAFT = "DRAFT"
+    OPEN = "OPEN"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    ON_HOLD = "ON_HOLD"
+
+
+class POStatus(str, Enum):
+    DRAFT = "DRAFT"
+    OPEN = "OPEN"
+    PARTIAL = "PARTIAL"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
+class RFQStatus(str, Enum):
+    OPEN = "OPEN"
+    IN_REVIEW = "IN_REVIEW"
+    QUOTED = "QUOTED"
+    LOST = "LOST"
+    CANCELLED = "CANCELLED"
+    CONVERTED_TO_ORDER = "CONVERTED_TO_ORDER"
+
+
+# ---- Priority ----
+
+class Priority(str, Enum):
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    NORMAL = "NORMAL"
+    LOW = "LOW"
+
+
+# ---- Roles ----
+
+class BIRole(str, Enum):
+    EMPLOYEE = "EMPLOYEE"
+    TEAM_LEADER = "TEAM_LEADER"
+    DEPT_HEAD = "DEPT_HEAD"
+    MANAGEMENT = "MANAGEMENT"
+    SYSADMIN = "SYSADMIN"
+    AUDITOR = "AUDITOR"
+    INTEGRATION_SERVICE = "INTEGRATION_SERVICE"
+
+
+# ---- Parties ----
+
+class PartyType(str, Enum):
+    CUSTOMER = "CUSTOMER"
+    SUPPLIER = "SUPPLIER"
+    EMPLOYEE = "EMPLOYEE"
+    INTERNAL = "INTERNAL"
+    OTHER = "OTHER"
+
+
+# ---- Email Classification ----
+
+class EmailDomain(str, Enum):
+    SALES = "SALES"
+    PURCHASE = "PURCHASE"
+    ENGINEERING = "ENGINEERING"
+    PPC = "PPC"
+    PRODUCTION = "PRODUCTION"
+    QUALITY = "QUALITY"
+    DISPATCH = "DISPATCH"
+    LOGISTICS = "LOGISTICS"
+    FINANCE = "FINANCE"
+    INTERNAL = "INTERNAL"
+    MANAGEMENT = "MANAGEMENT"
+    CUSTOMER_SUPPORT = "CUSTOMER_SUPPORT"
+    GENERAL = "GENERAL"
+
+
+class EmailIntent(str, Enum):
+    ENQUIRY = "ENQUIRY"
+    RFQ = "RFQ"
+    QUOTATION = "QUOTATION"
+    PURCHASE_ORDER = "PURCHASE_ORDER"
+    ORDER_CONFIRMATION = "ORDER_CONFIRMATION"
+    REQUEST = "REQUEST"
+    CLARIFICATION = "CLARIFICATION"
+    TECHNICAL_QUERY = "TECHNICAL_QUERY"
+    SUPPLIER_CONFIRMATION = "SUPPLIER_CONFIRMATION"
+    DELIVERY_UPDATE = "DELIVERY_UPDATE"
+    DELAY_NOTIFICATION = "DELAY_NOTIFICATION"
+    COMPLAINT = "COMPLAINT"
+    STATUS_UPDATE = "STATUS_UPDATE"
+    APPROVAL = "APPROVAL"
+    REJECTION = "REJECTION"
+    ESCALATION = "ESCALATION"
+    FOLLOW_UP = "FOLLOW_UP"
+    INFORMATION_ONLY = "INFORMATION_ONLY"
+    AUTOMATED_NOTIFICATION = "AUTOMATED_NOTIFICATION"
+    OTHER = "OTHER"
+
+
+class FollowUpType(str, Enum):
+    NONE = "NONE"
+    REQUIRED = "REQUIRED"
+    WAITING_INTERNAL = "WAITING_INTERNAL"
+    WAITING_CUSTOMER = "WAITING_CUSTOMER"
+    WAITING_SUPPLIER = "WAITING_SUPPLIER"
+    WAITING_DEPARTMENT = "WAITING_DEPARTMENT"
+    UNCERTAIN = "UNCERTAIN"
+
+
+# ---- Imports ----
+
+class ImportType(str, Enum):
+    SO = "SO"
+    SO_LINES = "SO_LINES"
+    MRP = "MRP"
+    EMPLOYEES = "EMPLOYEES"
+    PARTS = "PARTS"
+    CUSTOMERS = "CUSTOMERS"
+    SUPPLIERS = "SUPPLIERS"
+    RFQ = "RFQ"
+    RFQ_LINES = "RFQ_LINES"
+
+
+class ImportStatus(str, Enum):
+    UPLOADING = "UPLOADING"
+    STAGED = "STAGED"
+    VALIDATING = "VALIDATING"
+    VALIDATION_FAILED = "VALIDATION_FAILED"
+    AWAITING_CONFIRMATION = "AWAITING_CONFIRMATION"
+    IMPORTING = "IMPORTING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    ROLLED_BACK = "ROLLED_BACK"
+
+
+# ---- Alerts ----
+
+class AlertType(str, Enum):
+    OVERDUE_TASK = "OVERDUE_TASK"
+    NO_OWNER = "NO_OWNER"
+    BLOCKED = "BLOCKED"
+    SUPPLIER_RISK = "SUPPLIER_RISK"
+    MATERIAL_SHORTAGE = "MATERIAL_SHORTAGE"
+    COMMITMENT_BREACH = "COMMITMENT_BREACH"
+    CASE_INACTIVE = "CASE_INACTIVE"
+    DEPENDENCY_DELAY = "DEPENDENCY_DELAY"
+    REVIEW_PENDING = "REVIEW_PENDING"
+    MISSED_DEADLINE = "MISSED_DEADLINE"
+
+
+class AlertStatus(str, Enum):
+    OPEN = "OPEN"
+    ACKNOWLEDGED = "ACKNOWLEDGED"
+    RESOLVED = "RESOLVED"
+    SUPPRESSED = "SUPPRESSED"
+
+
+# ---- Processing Jobs ----
+
+class JobType(str, Enum):
+    EMAIL_PREPROCESS = "EMAIL_PREPROCESS"
+    EMAIL_ANALYSE = "EMAIL_ANALYSE"
+    CONTEXT_RESOLVE = "CONTEXT_RESOLVE"
+    IMPORT_PREVIEW = "IMPORT_PREVIEW"
+    IMPORT_EXECUTE = "IMPORT_EXECUTE"
+    MRP_RECONCILE = "MRP_RECONCILE"
+    TASK_EXTRACT = "TASK_EXTRACT"
+    DEPENDENCY_RECALCULATE = "DEPENDENCY_RECALCULATE"
+    MONITORING_EVALUATE = "MONITORING_EVALUATE"
+    DRAFT_GENERATE = "DRAFT_GENERATE"
+    AUDIT_PERSIST = "AUDIT_PERSIST"
+
+
+class JobStatus(str, Enum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    DEAD_LETTER = "DEAD_LETTER"
+    WAITING_FOR_PROVIDER_QUOTA = "WAITING_FOR_PROVIDER_QUOTA"
+    CANCELLED = "CANCELLED"
+    SKIPPED = "SKIPPED"
