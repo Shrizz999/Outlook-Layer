@@ -43,6 +43,19 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }),
+  uploadEml: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/emails/upload-eml`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Upload failed: ${errorText}`);
+    }
+    return res.json() as Promise<SourceMessage>;
+  },
 
   // Tasks
   listTasks: () => fetchJson<LegacyTask[]>(`${API_BASE}/tasks`),

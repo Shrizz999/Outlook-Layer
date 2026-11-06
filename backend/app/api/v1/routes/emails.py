@@ -3,14 +3,14 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel
 
 from app.repositories.email_repo import EmailRepository
 from app.schemas.email import EmailAnalysisRead, SourceMessageCreate, SourceMessageRead
 from app.services.email.ingestion import EmailIngestionService
 from app.services.intelligence.analyser import EmailAnalysisService
-from app.integrations.email_providers.fixture_provider import RawMessage
+from app.integrations.email_providers.fixture_provider import FixtureEmailProvider, RawMessage
 
 router = APIRouter()
 repo = EmailRepository()
@@ -52,6 +52,37 @@ async def ingest_new_email(payload: NewEmailPayload) -> SourceMessageRead:
     msg, is_dup = await ingestion_service.ingest_raw_message(mailbox_id, raw)
     if not msg:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to ingest email")
+    return msg
+
+
+@router.post("/upload-eml", response_model=SourceMessageRead, status_code=status.HTTP_201_CREATED)
+async def upload_eml_file(file: UploadFile = File(...)) -> SourceMessageRead:
+    """Upload a real .eml file. Automatically extracts headers, cleans body, and runs AI intelligence."""
+    import email as email_lib
+    import email.policy
+
+    if not file.filename or not file.filename.lower().endswith((".eml", ".msg")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file format. Please upload a standard .eml file.",
+        )
+
+    try:
+        content_bytes = await file.read()
+        msg_obj = email_lib.message_from_bytes(content_bytes, policy=email_lib.policy.default)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not parse .eml message: {str(e)}",
+        )
+
+    provider = FixtureEmailProvider()
+    raw = provider._parse_eml_message(msg_obj, file.filename)
+
+    mailbox_id = await repo.get_or_create_default_mailbox()
+    msg, is_dup = await ingestion_service.ingest_raw_message(mailbox_id, raw)
+    if not msg:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to ingest .eml message")
     return msg
 
 

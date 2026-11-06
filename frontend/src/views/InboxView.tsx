@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Mail, CheckCircle2, AlertCircle, Sparkles, ChevronDown, ChevronRight, FileText, User, Plus, X } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Mail, CheckCircle2, AlertCircle, Sparkles, ChevronDown, ChevronRight, FileText, User, Plus, X, UploadCloud, FileCheck } from 'lucide-react';
 import { EmailAnalysis, SourceMessage } from '../types';
 import { api } from '../api/client';
 
@@ -67,6 +67,31 @@ export const InboxView: React.FC<InboxViewProps> = ({ emails, onRefresh }) => {
     }
   };
 
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const newMsg = await api.uploadEml(file);
+      onRefresh();
+      setSelectedEmail(newMsg);
+      if (newMsg.latest_analysis) {
+        setAnalysis(newMsg.latest_analysis);
+      }
+    } catch (err: any) {
+      alert(`Upload failed: ${err.message}`);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleCreateEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!composeSubject || !composeBody || !composeSenderEmail) {
@@ -103,20 +128,38 @@ export const InboxView: React.FC<InboxViewProps> = ({ emails, onRefresh }) => {
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-8rem)]">
       {/* Left Column: Email List */}
       <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col shadow-xs">
-        <div className="p-3.5 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+        <div className="p-3 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between gap-2">
           <div className="flex items-center space-x-2">
             <Mail className="w-4 h-4 text-blue-600" />
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-              Ingested Messages ({emails.length})
+              Messages ({emails.length})
             </h3>
           </div>
-          <button
-            onClick={() => setShowCompose(true)}
-            className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg transition shadow-xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Simulate Inbound Email</span>
-          </button>
+          <div className="flex items-center space-x-1.5">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".eml,.msg"
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="flex items-center space-x-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-[11px] font-semibold px-2.5 py-1 rounded-lg transition shadow-2xs disabled:opacity-50"
+              title="Upload an .eml or .msg email file"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+              <span>{isUploading ? 'Uploading...' : 'Upload .eml'}</span>
+            </button>
+            <button
+              onClick={() => setShowCompose(true)}
+              className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg transition shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Compose</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
