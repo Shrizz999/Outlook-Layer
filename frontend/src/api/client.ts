@@ -37,6 +37,12 @@ export const api = {
   getEmailAnalysis: (id: string) => fetchJson<EmailAnalysis>(`${API_BASE}/emails/${id}/analysis`),
   triggerAnalysis: (id: string) =>
     fetchJson<EmailAnalysis>(`${API_BASE}/emails/${id}/analyse`, { method: 'POST' }),
+  ingestEmail: (payload: { subject: string; sender_name: string; sender_email: string; body: string }) =>
+    fetchJson<SourceMessage>(`${API_BASE}/emails/ingest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
 
   // Tasks
   listTasks: () => fetchJson<LegacyTask[]>(`${API_BASE}/tasks`),

@@ -7,12 +7,15 @@ interface TasksViewProps {
   tasks: LegacyTask[];
   proposals: TaskProposal[];
   onRefresh: () => void;
+  currentRole?: string;
 }
 
-export const TasksView: React.FC<TasksViewProps> = ({ tasks, proposals, onRefresh }) => {
+export const TasksView: React.FC<TasksViewProps> = ({ tasks, proposals, onRefresh, currentRole = 'MANAGEMENT' }) => {
   const [activeTab, setActiveTab] = useState<'proposals' | 'operational'>('proposals');
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [assignedName, setAssignedName] = useState('John Sales');
+
+  const canApprove = ['MANAGEMENT', 'DEPT_HEAD', 'TEAM_LEADER', 'SYSADMIN'].includes(currentRole);
 
   const handleApprove = async (propId: string) => {
     setApprovingId(propId);
@@ -126,7 +129,7 @@ export const TasksView: React.FC<TasksViewProps> = ({ tasks, proposals, onRefres
                           <Check className="w-3 h-3 mr-1" />
                           Approved ({prop.approved_task_id})
                         </span>
-                      ) : (
+                      ) : canApprove ? (
                         <button
                           onClick={() => handleApprove(prop.id)}
                           disabled={approvingId === prop.id}
@@ -135,6 +138,10 @@ export const TasksView: React.FC<TasksViewProps> = ({ tasks, proposals, onRefres
                           <UserPlus className="w-3.5 h-3.5" />
                           <span>{approvingId === prop.id ? 'Approving...' : 'Approve & Assign'}</span>
                         </button>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded-md border border-slate-200">
+                          Awaiting Manager Approval
+                        </span>
                       )}
                     </div>
 

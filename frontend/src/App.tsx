@@ -81,6 +81,7 @@ export const App: React.FC = () => {
         <Sidebar
           currentTab={currentTab}
           onTabChange={setCurrentTab}
+          currentRole={currentRole}
           pendingEmailsCount={emails.filter((m) => m.processing_status === 'NEEDS_REVIEW').length}
           pendingProposalsCount={proposals.filter((p) => p.proposal_status === 'PENDING').length}
         />
@@ -90,7 +91,7 @@ export const App: React.FC = () => {
           {currentTab === 'inbox' && <InboxView emails={emails} onRefresh={loadData} />}
           {currentTab === 'cases' && <BusinessCasesView cases={cases} />}
           {currentTab === 'tasks' && (
-            <TasksView tasks={tasks} proposals={proposals} onRefresh={loadData} />
+            <TasksView tasks={tasks} proposals={proposals} onRefresh={loadData} currentRole={currentRole} />
           )}
           {currentTab === 'dependencies' && (
             <DependenciesView dependencies={dependencies} tasks={tasks} onRefresh={loadData} />

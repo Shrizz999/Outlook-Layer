@@ -10,6 +10,7 @@ import {
   Activity,
   Layers,
 } from 'lucide-react';
+import { BIRole } from '../types';
 
 export type NavTab =
   | 'overview'
@@ -26,6 +27,7 @@ interface SidebarProps {
   onTabChange: (tab: NavTab) => void;
   pendingEmailsCount: number;
   pendingProposalsCount: number;
+  currentRole: BIRole;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -33,17 +35,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTabChange,
   pendingEmailsCount,
   pendingProposalsCount,
+  currentRole,
 }) => {
-  const navItems = [
-    { id: 'overview', label: 'Executive Overview', icon: LayoutDashboard },
-    { id: 'inbox', label: 'Email Intelligence', icon: Mail, badge: pendingEmailsCount },
-    { id: 'cases', label: 'Business Cases', icon: Briefcase },
-    { id: 'tasks', label: 'Tasks & Proposals', icon: CheckSquare, badge: pendingProposalsCount },
-    { id: 'dependencies', label: 'Dependency Graph', icon: Network },
-    { id: 'orders', label: 'SO & MRP Reference', icon: Package },
-    { id: 'drafts', label: 'Smart Drafts', icon: FileEdit },
-    { id: 'diagnostics', label: 'AI & Diagnostics', icon: Activity },
+  const allNavItems = [
+    { id: 'overview', label: 'Executive Overview', icon: LayoutDashboard, roles: ['MANAGEMENT', 'DEPT_HEAD', 'TEAM_LEADER', 'EMPLOYEE', 'SYSADMIN'] },
+    { id: 'inbox', label: 'Email Intelligence', icon: Mail, badge: pendingEmailsCount, roles: ['MANAGEMENT', 'DEPT_HEAD', 'TEAM_LEADER', 'EMPLOYEE', 'SYSADMIN'] },
+    { id: 'cases', label: 'Business Cases', icon: Briefcase, roles: ['MANAGEMENT', 'DEPT_HEAD', 'TEAM_LEADER', 'SYSADMIN'] },
+    { id: 'tasks', label: 'Tasks & Proposals', icon: CheckSquare, badge: pendingProposalsCount, roles: ['MANAGEMENT', 'DEPT_HEAD', 'TEAM_LEADER', 'EMPLOYEE', 'SYSADMIN'] },
+    { id: 'dependencies', label: 'Dependency Graph', icon: Network, roles: ['MANAGEMENT', 'DEPT_HEAD', 'SYSADMIN'] },
+    { id: 'orders', label: 'SO & MRP Reference', icon: Package, roles: ['MANAGEMENT', 'DEPT_HEAD', 'TEAM_LEADER', 'SYSADMIN'] },
+    { id: 'drafts', label: 'Smart Drafts', icon: FileEdit, roles: ['MANAGEMENT', 'DEPT_HEAD', 'TEAM_LEADER', 'EMPLOYEE', 'SYSADMIN'] },
+    { id: 'diagnostics', label: 'AI & Diagnostics', icon: Activity, roles: ['SYSADMIN', 'MANAGEMENT'] },
   ];
+
+  const navItems = allNavItems.filter((item) => item.roles.includes(currentRole));
 
   return (
     <aside className="w-64 border-r border-slate-200 bg-slate-50/50 flex flex-col justify-between py-5 px-3 min-h-[calc(100vh-4rem)]">
