@@ -46,6 +46,9 @@ class MasterDataRepository:
             "updated_at": now,
         }
         if self._client:
+            existing = self._client.table("bi_departments").select("*").eq("code", data.code).execute()
+            if existing.data:
+                return DepartmentRead(**existing.data[0])
             payload = {**dept_dict, "id": str(dept_id), "parent_id": str(data.parent_id) if data.parent_id else None, "created_at": now.isoformat(), "updated_at": now.isoformat()}
             res = self._client.table("bi_departments").insert(payload).execute()
             return DepartmentRead(**res.data[0])
@@ -90,6 +93,9 @@ class MasterDataRepository:
             "created_at": data.get("created_at", datetime.now(UTC)),
         }
         if self._client:
+            existing = self._client.table("employees").select("*").eq("name", data["name"]).execute()
+            if existing.data:
+                return EmployeeRead(**existing.data[0])
             payload = {**record, "id": str(emp_id), "created_at": record["created_at"].isoformat() if hasattr(record["created_at"], "isoformat") else str(record["created_at"])}
             res = self._client.table("employees").insert(payload).execute()
             return EmployeeRead(**res.data[0])
@@ -119,6 +125,9 @@ class MasterDataRepository:
             "updated_at": now,
         }
         if self._client:
+            existing = self._client.table("bi_customers").select("*").eq("customer_code", data.customer_code).execute()
+            if existing.data:
+                return CustomerRead(**existing.data[0])
             payload = {**record, "id": str(cust_id), "created_at": now.isoformat(), "updated_at": now.isoformat()}
             res = self._client.table("bi_customers").insert(payload).execute()
             return CustomerRead(**res.data[0])
@@ -148,6 +157,9 @@ class MasterDataRepository:
             "updated_at": now,
         }
         if self._client:
+            existing = self._client.table("bi_suppliers").select("*").eq("supplier_code", data.supplier_code).execute()
+            if existing.data:
+                return SupplierRead(**existing.data[0])
             payload = {**record, "id": str(sup_id), "created_at": now.isoformat(), "updated_at": now.isoformat()}
             res = self._client.table("bi_suppliers").insert(payload).execute()
             return SupplierRead(**res.data[0])
@@ -180,6 +192,9 @@ class MasterDataRepository:
             "updated_at": now,
         }
         if self._client:
+            existing = self._client.table("bi_parts").select("*").eq("part_number", data.part_number).execute()
+            if existing.data:
+                return PartRead(**existing.data[0])
             payload = {**record, "id": str(part_id), "created_at": now.isoformat(), "updated_at": now.isoformat()}
             res = self._client.table("bi_parts").insert(payload).execute()
             return PartRead(**res.data[0])

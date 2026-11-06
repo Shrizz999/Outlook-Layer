@@ -232,7 +232,7 @@ class TaskRepository:
         offset: int = 0,
     ) -> list[LegacyTaskRead]:
         if self._client:
-            q = self._client.table("tasks").select("*, bi_task_metadata(*)")
+            q = self._client.table("tasks").select("*")
             if status:
                 q = q.eq("status", status)
             if department:
@@ -240,13 +240,19 @@ class TaskRepository:
             if assigned_to:
                 q = q.eq("assigned_to", assigned_to)
             res = q.range(offset, offset + limit - 1).execute()
+            
+            task_ids = [row["task_id"] for row in res.data if row.get("task_id")]
+            meta_map = {}
+            if task_ids:
+                try:
+                    res_meta = self._client.table("bi_task_metadata").select("*").in_("task_id", task_ids).execute()
+                    meta_map = {m["task_id"]: m for m in res_meta.data}
+                except Exception:
+                    meta_map = {}
+
             tasks = []
             for row in res.data:
-                meta = row.get("bi_task_metadata") or [{}]
-                if isinstance(meta, list) and meta:
-                    meta = meta[0]
-                elif not isinstance(meta, dict):
-                    meta = {}
+                meta = meta_map.get(row.get("task_id"), {})
                 b_case = meta.get("business_case_id")
                 if case_id and b_case != str(case_id):
                     continue

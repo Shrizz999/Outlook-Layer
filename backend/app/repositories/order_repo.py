@@ -64,6 +64,12 @@ class OrderRepository:
             self._store.bi_sales_order_lines[str(line_id)] = line_dict
 
         if self._client:
+            existing = self._client.table("bi_sales_orders").select("*").eq("so_number", data.so_number).execute()
+            if existing.data:
+                res_lines = self._client.table("bi_sales_order_lines").select("*").eq("sales_order_id", existing.data[0]["id"]).execute()
+                lines = [SalesOrderLineRead(**l) for l in res_lines.data]
+                return SalesOrderRead(**{**existing.data[0], "lines": lines})
+
             payload_so = {
                 **so_record,
                 "id": str(so_id),
@@ -194,15 +200,23 @@ class OrderRepository:
             }
             if self._client:
                 p_r = {
-                    **r_dict,
                     "id": str(r_id),
                     "mrp_snapshot_id": str(snap_id),
                     "part_id": str(r.part_id) if r.part_id else None,
+                    "source_part_number": r.source_part_number,
                     "available_stock": float(r.available_stock) if r.available_stock is not None else None,
                     "reserved_stock": float(r.reserved_stock) if r.reserved_stock is not None else None,
                     "required_quantity": float(r.required_quantity) if r.required_quantity is not None else None,
+                    "pending_purchase_quantity": float(r.pending_purchase_quantity) if r.pending_purchase_quantity is not None else None,
+                    "open_po_quantity": float(r.open_po_quantity) if r.open_po_quantity is not None else None,
+                    "open_so_quantity": float(r.open_so_quantity) if r.open_so_quantity is not None else None,
+                    "open_work_order_quantity": float(r.open_work_order_quantity) if r.open_work_order_quantity is not None else None,
+                    "shortage_quantity_source": float(r.shortage_quantity_source) if r.shortage_quantity_source is not None else None,
                     "shortage_quantity_computed": float(r.shortage_quantity_computed) if r.shortage_quantity_computed is not None else None,
+                    "shortage_method": r.shortage_method,
+                    "unit_of_measure": r.unit_of_measure,
                     "planning_date": r.planning_date.isoformat() if r.planning_date else None,
+                    "source_row_reference": r.source_row_reference,
                     "created_at": now.isoformat(),
                 }
                 self._client.table("bi_mrp_records").insert(p_r).execute()
