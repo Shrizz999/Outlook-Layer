@@ -1,0 +1,21 @@
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env.production
+    restart: always
+
+  frontend:
+    build: ./frontend
+    restart: always
+
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+    depends_on: [frontend, backend]
+    restart: always
+
+volumes:
+  caddy_data:
