@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # --- Application ---
     app_env: Literal["development", "staging", "production"] = "development"
     app_secret_key: str = Field(default="dev-secret-change-in-production")
-    cors_origins: list[str] = Field(default=["http://localhost:5173"])
+    cors_origins: str | list[str] = Field(default=["http://localhost:5173"])
 
     # --- Supabase ---
     supabase_url: str = Field(default="")
@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     microsoft_client_secret: str = Field(default="")
     microsoft_authority: str = Field(default="https://login.microsoftonline.com/common")
     microsoft_redirect_uri: str = Field(default="http://localhost:8000/api/v1/outlook/callback")
-    microsoft_scopes: list[str] = Field(
+    microsoft_scopes: str | list[str] = Field(
         default=[
             "User.Read",
             "Mail.Read",
@@ -78,7 +78,7 @@ class Settings(BaseSettings):
 
     # --- File Upload ---
     max_upload_size_mb: int = Field(default=50, ge=1, le=500)
-    allowed_upload_extensions: list[str] = Field(
+    allowed_upload_extensions: str | list[str] = Field(
         default=[".xlsx", ".xls", ".csv"]
     )
 
