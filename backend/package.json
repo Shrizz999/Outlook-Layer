@@ -1,0 +1,13 @@
+{
+  "name": "balbird-intelligence-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Balbird Intelligence Backend Python FastAPI Service",
+  "scripts": {
+    "start": "uvicorn app.main:app --host 0.0.0.0 --port 8000",
+    "dev": "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "test": "pytest",
+    "lint": "ruff check .",
+    "format": "ruff format ."
+  }
+}
