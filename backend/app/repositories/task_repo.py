@@ -23,9 +23,19 @@ class TaskRepository:
         self._task_seq = 100
 
     def generate_task_id(self) -> str:
-        tid = f"TASK-{self._task_seq:05d}"
-        self._task_seq += 1
-        return tid
+        if self._client:
+            import time
+            ts = int(time.time() * 1000) % 1000000
+            tid = f"TASK-{ts:06d}"
+            while self._client.table("tasks").select("task_id").eq("task_id", tid).execute().data:
+                ts += 1
+                tid = f"TASK-{ts:06d}"
+            return tid
+        while True:
+            tid = f"TASK-{self._task_seq:05d}"
+            self._task_seq += 1
+            if tid not in self._store.tasks:
+                return tid
 
     # --- Proposals ---
 
@@ -221,6 +231,95 @@ class TaskRepository:
 
         return LegacyTaskRead(**legacy_record, business_case_id=proposal.business_case_id, verification_status="UNVERIFIED")
 
+    async def create_task_raw(self, task_dict: dict[str, Any]) -> LegacyTaskRead:
+        """Directly insert a task into legacy tasks table and bi_task_metadata."""
+        now = datetime.now(UTC)
+        task_id = task_dict.get("task_id") or self.generate_task_id()
+        case_id = task_dict.get("business_case_id")
+        if isinstance(case_id, str):
+            try:
+                case_id = UUID(case_id)
+            except ValueError:
+                case_id = None
+
+        legacy_record = {
+            "task_id": task_id,
+            "date": task_dict.get("date") or now.date().isoformat(),
+            "description": task_dict.get("description", "Manufacturing Task"),
+            "assigned_to": task_dict.get("assigned_to", "Unassigned"),
+            "assigned_by": task_dict.get("assigned_by", "System"),
+            "department": task_dict.get("department", "General"),
+            "deadline": task_dict.get("deadline"),
+            "priority": task_dict.get("priority", "NORMAL"),
+            "status": task_dict.get("status", "pending"),
+            "reason": task_dict.get("reason"),
+            "source": task_dict.get("source", "System"),
+            "updated_by": task_dict.get("assigned_by", "System"),
+            "last_updated": now,
+            "checklist": None,
+            "workflow_id": None,
+            "progress_percentage": 100 if task_dict.get("status") in ("completed", "completed_reported", "completed_verified") else 0,
+            "delay_reason": None,
+        }
+
+        meta_id = uuid4()
+        meta_record = {
+            "id": meta_id,
+            "task_id": task_id,
+            "business_case_id": case_id,
+            "verification_status": task_dict.get("verification_status", "UNVERIFIED"),
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        if self._client:
+            try:
+                payload_legacy = {**legacy_record, "last_updated": now.isoformat()}
+                self._client.table("tasks").insert(payload_legacy).execute()
+            except Exception:
+                pass
+
+            if case_id:
+                try:
+                    payload_meta = {
+                        "id": str(meta_id),
+                        "task_id": task_id,
+                        "business_case_id": str(case_id),
+                        "verification_status": task_dict.get("verification_status", "UNVERIFIED"),
+                        "created_at": now.isoformat(),
+                        "updated_at": now.isoformat(),
+                    }
+                    self._client.table("bi_task_metadata").insert(payload_meta).execute()
+                except Exception:
+                    pass
+        self._store.tasks[task_id] = legacy_record
+        if case_id:
+            self._store.bi_task_metadata[task_id] = meta_record
+
+        return LegacyTaskRead(
+            **legacy_record,
+            business_case_id=case_id,
+            verification_status=task_dict.get("verification_status", "UNVERIFIED"),
+        )
+
+    async def update_task_status(self, task_id: str, new_status: str) -> None:
+        """Update status of an operational task."""
+        now = datetime.now(UTC)
+        progress = 100 if new_status in ("completed", "completed_reported", "completed_verified") else 50 if new_status == "in_progress" else 0
+        if self._client:
+            try:
+                self._client.table("tasks").update({
+                    "status": new_status,
+                    "progress_percentage": progress,
+                    "last_updated": now.isoformat(),
+                }).eq("task_id", task_id).execute()
+            except Exception:
+                pass
+        if task_id in self._store.tasks:
+            self._store.tasks[task_id]["status"] = new_status
+            self._store.tasks[task_id]["progress_percentage"] = progress
+            self._store.tasks[task_id]["last_updated"] = now
+
     async def list_legacy_tasks(
         self,
         *,
@@ -286,13 +385,15 @@ class TaskRepository:
 
     async def get_task_by_id(self, task_id: str) -> LegacyTaskRead | None:
         if self._client:
-            res = self._client.table("tasks").select("*, bi_task_metadata(*)").eq("task_id", task_id).execute()
+            res = self._client.table("tasks").select("*").eq("task_id", task_id).execute()
             if not res.data:
                 return None
             row = res.data[0]
-            meta = row.get("bi_task_metadata") or [{}]
-            if isinstance(meta, list) and meta:
-                meta = meta[0]
+            try:
+                meta_res = self._client.table("bi_task_metadata").select("*").eq("task_id", task_id).execute()
+                meta = meta_res.data[0] if meta_res.data else {}
+            except Exception:
+                meta = {}
             b_case = meta.get("business_case_id")
             return LegacyTaskRead(
                 **{k: v for k, v in row.items() if k != "bi_task_metadata"},

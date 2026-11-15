@@ -1,7 +1,7 @@
 """Monitoring and Risk Engine."""
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -85,15 +85,20 @@ class MonitoringRiskEngine:
 
         return None
 
-    async def evaluate_tasks(self) -> list[MonitoringAlertRead]:
-        """Scans tasks for overdue deadlines, blockers, and unassigned status."""
-        today_str = date.today().isoformat()
+    async def evaluate_tasks(self, warning_window_hours: int = 48) -> list[MonitoringAlertRead]:
+        """Scans tasks for overdue deadlines, early warnings (48h), blockers, and unassigned status."""
+        today = date.today()
+        today_str = today.isoformat()
+        warning_deadline = (today + timedelta(hours=warning_window_hours)).isoformat()
+
         tasks = await self._task_repo.list_legacy_tasks(limit=200)
         raised_alerts: list[MonitoringAlertRead] = []
 
         for t in tasks:
-            # Overdue task check
-            if t.deadline and t.deadline < today_str and t.status not in ("completed", "completed_reported", "completed_verified", "cancelled"):
+            is_completed = (t.status or "").lower() in ("completed", "completed_reported", "completed_verified", "cancelled")
+
+            # 1. Overdue task check
+            if t.deadline and t.deadline < today_str and not is_completed:
                 dedup_key = f"OVERDUE_{t.task_id}"
                 alert = await self._alert_repo.create_or_update_alert(
                     MonitoringAlertCreate(
@@ -108,7 +113,24 @@ class MonitoringRiskEngine:
                 )
                 raised_alerts.append(alert)
 
-            # Blocked task check
+            # 2. Early delay warning check (within configurable window e.g. 48h)
+            elif t.deadline and today_str <= t.deadline <= warning_deadline and not is_completed:
+                if (t.progress_percentage or 0) < 50:
+                    dedup_key = f"EARLY_WARNING_{t.task_id}"
+                    alert = await self._alert_repo.create_or_update_alert(
+                        MonitoringAlertCreate(
+                            alert_type="EARLY_WARNING",
+                            severity=Priority.HIGH.value,
+                            task_id=t.task_id,
+                            business_case_id=t.business_case_id,
+                            description=f"Task {t.task_id} ('{t.description}') deadline is in <{warning_window_hours}h ({t.deadline}) but progress is only {t.progress_percentage or 0}%",
+                            suggested_action=f"Check progress with {t.assigned_to or 'assignee'} before deadline breaches",
+                            dedup_key=dedup_key,
+                        )
+                    )
+                    raised_alerts.append(alert)
+
+            # 3. Blocked task check
             if t.status == "blocked":
                 dedup_key = f"BLOCKED_{t.task_id}"
                 alert = await self._alert_repo.create_or_update_alert(
@@ -124,7 +146,7 @@ class MonitoringRiskEngine:
                 )
                 raised_alerts.append(alert)
 
-            # Unassigned task check
+            # 4. Unassigned task check
             if not t.assigned_to or t.assigned_to.lower() in ("unassigned", "pending"):
                 dedup_key = f"NO_OWNER_{t.task_id}"
                 alert = await self._alert_repo.create_or_update_alert(
@@ -141,3 +163,64 @@ class MonitoringRiskEngine:
                 raised_alerts.append(alert)
 
         return raised_alerts
+
+    async def calculate_department_risk_scores(self) -> dict[str, Any]:
+        """Calculates operational risk score (0-100) per department based on open alerts, overdues, and shortages."""
+        tasks = await self._task_repo.list_legacy_tasks(limit=300)
+        alerts = await self._alert_repo.list_alerts(status="OPEN")
+
+        standard_depts = ["Engineering", "Purchase", "Stores", "Production", "Quality", "Dispatch", "Sales"]
+        dept_scores: dict[str, dict[str, Any]] = {}
+        for dept in standard_depts:
+            dept_scores[dept] = {
+                "department": dept,
+                "risk_score": 0,
+                "active_tasks_count": 0,
+                "overdue_count": 0,
+                "blocked_count": 0,
+                "open_alerts_count": 0,
+                "risk_level": "LOW",
+            }
+
+        for t in tasks:
+            dept_name = (t.department or "General").capitalize()
+            if dept_name not in dept_scores:
+                dept_scores[dept_name] = {
+                    "department": dept_name,
+                    "risk_score": 0,
+                    "active_tasks_count": 0,
+                    "overdue_count": 0,
+                    "blocked_count": 0,
+                    "open_alerts_count": 0,
+                    "risk_level": "LOW",
+                }
+            if t.status not in ("completed", "completed_reported", "completed_verified"):
+                dept_scores[dept_name]["active_tasks_count"] += 1
+
+        from datetime import date
+        today_str = date.today().isoformat()
+        for t in tasks:
+            dept_name = (t.department or "General").capitalize()
+            if t.deadline and t.deadline < today_str and t.status not in ("completed", "completed_reported", "completed_verified"):
+                dept_scores[dept_name]["overdue_count"] += 1
+            if t.status == "blocked":
+                dept_scores[dept_name]["blocked_count"] += 1
+
+        for a in alerts:
+            points = 25 if a.severity == "CRITICAL" else (15 if a.severity == "HIGH" else 5)
+            matched_dept = "Sales"
+            if a.task_id:
+                t = next((tk for tk in tasks if tk.task_id == a.task_id), None)
+                if t and t.department:
+                    matched_dept = t.department.capitalize()
+            if matched_dept in dept_scores:
+                dept_scores[matched_dept]["open_alerts_count"] += 1
+                dept_scores[matched_dept]["risk_score"] = min(100, dept_scores[matched_dept]["risk_score"] + points)
+
+        for d, data in dept_scores.items():
+            score = data["risk_score"] + (data["overdue_count"] * 20) + (data["blocked_count"] * 15)
+            score = min(100, score)
+            data["risk_score"] = score
+            data["risk_level"] = "CRITICAL" if score >= 75 else ("HIGH" if score >= 50 else ("MEDIUM" if score >= 25 else "LOW"))
+
+        return dept_scores

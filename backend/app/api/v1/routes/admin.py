@@ -1,20 +1,34 @@
 """Admin and Dashboard Diagnostics Routes."""
 from __future__ import annotations
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.api.deps import get_optional_user
 from app.core.config import get_settings
 from app.repositories.alert_repo import AlertRepository
 from app.repositories.business_case_repo import BusinessCaseRepository
 from app.repositories.email_repo import EmailRepository
 from app.repositories.task_repo import TaskRepository
+from app.schemas.auth import UserAccountRead
 
 router = APIRouter()
 
 
 @router.get("/dashboard-summary")
-async def get_dashboard_summary() -> dict:
-    """Aggregates metrics for the executive and departmental dashboards."""
+async def get_dashboard_summary(user: UserAccountRead | None = Depends(get_optional_user)) -> dict:
+    """
+    Aggregates metrics for the executive and departmental dashboards.
+    - Employee: Blocked from accessing management dashboards.
+    - HOD: Scoped strictly to their own department.
+    - Manager / SysAdmin: Full company-wide visibility.
+    """
+    if user:
+        if user.approved_position == "EMPLOYEE":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: Employees cannot view executive management dashboards.",
+            )
+
     case_repo = BusinessCaseRepository()
     email_repo = EmailRepository()
     task_repo = TaskRepository()
@@ -25,6 +39,12 @@ async def get_dashboard_summary() -> dict:
     tasks = await task_repo.list_legacy_tasks(limit=100)
     proposals = await task_repo.list_proposals(limit=100)
     alerts = await alert_repo.list_alerts(limit=100)
+
+    # Scoping for HOD
+    if user and user.approved_position == "DEPT_HEAD":
+        dept_code = user.department.upper()
+        tasks = [t for t in tasks if (t.department or "").upper() == dept_code or dept_code in (t.department or "").upper()]
+        proposals = [p for p in proposals if (p.suggested_department or "").upper() == dept_code or dept_code in (p.suggested_department or "").upper()]
 
     open_cases = [c for c in cases if c.status not in ("COMPLETED", "CANCELLED", "ARCHIVED")]
     pending_emails = [m for m in messages if m.processing_status in ("PENDING", "NEEDS_REVIEW")]
@@ -78,3 +98,16 @@ async def get_system_status() -> dict:
         "supabase_configured": settings.supabase_configured,
         "version": "0.1.0-poc",
     }
+
+
+@router.post("/reset-data")
+async def reset_all_data(user: UserAccountRead | None = Depends(get_optional_user)) -> dict:
+    """Clears all emails, analyses, cases, tasks, proposals, and dependencies. Admin only."""
+    if user and user.approved_position not in ("SYSADMIN", "MANAGEMENT"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: Only administrators can reset system data.",
+        )
+    from scripts.clear_all_data import clear_all
+    clear_all()
+    return {"status": "success", "message": "All emails, tasks, proposals, and dependencies cleared successfully."}

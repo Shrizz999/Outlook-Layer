@@ -170,6 +170,19 @@ class BIRole(str, Enum):
     INTEGRATION_SERVICE = "INTEGRATION_SERVICE"
 
 
+class AccountStatus(str, Enum):
+    ACTIVE = "active"
+    PENDING_APPROVAL = "pending_approval"
+    REJECTED = "rejected"
+    SUSPENDED = "suspended"
+
+
+class RoleApprovalStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
 # ---- Parties ----
 
 class PartyType(str, Enum):

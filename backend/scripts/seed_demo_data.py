@@ -374,6 +374,45 @@ async def seed_all() -> None:
     if shortage_alert:
         print(f"   [ALERT DETECTED]: {shortage_alert.description}")
 
+    # 14. Demo User Accounts & HOD Assignments
+    print("14. Seeding Demo User Accounts & HODs...")
+    from app.core.security import hash_password
+    from app.repositories.auth_repo import AuthRepository
+    from app.schemas.master_data import DepartmentHODCreate
+    auth_repo = AuthRepository()
+
+    try:
+        await master_repo.assign_department_hod(
+            "PURCHASE",
+            DepartmentHODCreate(
+                employee_id=created_emps["Alice Purchase"],
+                assigned_by="SYSTEM_ADMIN",
+                notes="Assigned as HOD of Purchase",
+            ),
+        )
+    except Exception:
+        pass
+
+    demo_users = [
+        ("john.sales@balbird.invalid", "John Sales", "SALES", "EMPLOYEE", "EMPLOYEE", "active", created_emps.get("John Sales")),
+        ("alice.purchase@balbird.invalid", "Alice Purchase", "PURCHASE", "DEPT_HEAD", "DEPT_HEAD", "active", created_emps.get("Alice Purchase")),
+        ("grace.mgmt@balbird.invalid", "Grace Operations Head", "MANAGEMENT", "MANAGEMENT", "MANAGEMENT", "active", created_emps.get("Grace Operations Head")),
+        ("admin@balbird.com", "System Administrator", "MANAGEMENT", "SYSADMIN", "SYSADMIN", "active", created_emps.get("Grace Operations Head")),
+    ]
+
+    for email, name, dept, req_pos, app_pos, status_val, emp_id in demo_users:
+        if not await auth_repo.get_account_by_email(email):
+            await auth_repo.create_account({
+                "employee_id": emp_id,
+                "email": email,
+                "password_hash": hash_password("Password123!"),
+                "full_name": name,
+                "department": dept,
+                "requested_position": req_pos,
+                "approved_position": app_pos,
+                "account_status": status_val,
+            })
+
     print("--- Synthetic Demo Dataset Seeding Completed Successfully! ---")
 
 

@@ -72,6 +72,27 @@ class InMemoryStore:
         self.bi_monitoring_alerts: dict[str, dict[str, Any]] = {}
         self.bi_audit_events: dict[str, dict[str, Any]] = {}
         self.bi_human_feedback: dict[str, dict[str, Any]] = {}
+        self.bi_department_hods: dict[str, dict[str, Any]] = {}
+        self.bi_task_handovers: dict[str, dict[str, Any]] = {}
+        self.bi_physical_verifications: dict[str, dict[str, Any]] = {}
+
+        # Auth & RBAC tables
+        self.user_accounts: dict[str, dict[str, Any]] = {}
+        self.role_requests: dict[str, dict[str, Any]] = {}
+        self.user_sessions: dict[str, dict[str, Any]] = {}
+        self.user_audit_logs: dict[str, dict[str, Any]] = {}
+        self.login_rate_limits: dict[str, list[float]] = {}
+
+        # Multi-User Microsoft Outlook tables
+        self.microsoft_connections: dict[str, dict[str, Any]] = {}
+        self.email_folders: dict[str, dict[str, Any]] = {}
+        self.email_messages: dict[str, dict[str, Any]] = {}
+        self.email_folder_sync_state: dict[str, dict[str, Any]] = {}
+        self.email_sync_runs: dict[str, dict[str, Any]] = {}
+        self.email_analysis_results: dict[str, dict[str, Any]] = {}
+        self.email_drafts: dict[str, dict[str, Any]] = {}
+        self.email_send_audit_events: dict[str, dict[str, Any]] = {}
+        self.bi_external_task_mappings: dict[str, dict[str, Any]] = {}
 
         self._case_seq = 1
 

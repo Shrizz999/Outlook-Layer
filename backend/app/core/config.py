@@ -50,6 +50,32 @@ class Settings(BaseSettings):
     email_provider: Literal["fixture", "microsoft_graph"] = "fixture"
     fixture_email_dir: str = Field(default="../data/synthetic/emails")
 
+    # --- Microsoft Outlook Multi-User Integration ---
+    microsoft_client_id: str = Field(default="")
+    microsoft_client_secret: str = Field(default="")
+    microsoft_authority: str = Field(default="https://login.microsoftonline.com/common")
+    microsoft_redirect_uri: str = Field(default="http://localhost:8000/api/v1/outlook/callback")
+    microsoft_scopes: list[str] = Field(
+        default=[
+            "User.Read",
+            "Mail.Read",
+            "Mail.ReadWrite",
+            "Mail.Send",
+            "Tasks.ReadWrite",
+            "openid",
+            "profile",
+            "offline_access",
+        ]
+    )
+    token_encryption_key: str = Field(default="")
+
+    # --- Email Sync & Pipeline ---
+    email_sync_interval_minutes: int = Field(default=5, ge=1, le=1440)
+    email_sync_max_concurrency: int = Field(default=3, ge=1, le=20)
+    email_sync_batch_size: int = Field(default=50, ge=5, le=250)
+    email_analysis_enabled: bool = Field(default=False)
+    email_retention_days: int = Field(default=90, ge=1, le=3650)
+
     # --- File Upload ---
     max_upload_size_mb: int = Field(default=50, ge=1, le=500)
     allowed_upload_extensions: list[str] = Field(
@@ -76,6 +102,13 @@ class Settings(BaseSettings):
     def parse_extensions(cls, v: str | list[str]) -> list[str]:
         if isinstance(v, str):
             return [ext.strip() for ext in v.split(",") if ext.strip()]
+        return v
+
+    @field_validator("microsoft_scopes", mode="before")
+    @classmethod
+    def parse_scopes(cls, v: str | list[str]) -> list[str]:
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
         return v
 
     def validate_production_config(self) -> list[str]:

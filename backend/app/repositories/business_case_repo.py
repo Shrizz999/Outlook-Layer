@@ -115,7 +115,17 @@ class BusinessCaseRepository:
     async def create_case(self, data: BusinessCaseCreate) -> BusinessCaseRead:
         now = datetime.now(UTC)
         case_id = uuid4()
-        case_number = data.case_number or self._store.generate_case_number()
+        if data.case_number:
+            case_number = data.case_number
+        elif self._client:
+            import time
+            ts = int(time.time() * 1000) % 1000000
+            case_number = f"CASE-2026-{ts:06d}"
+            while self._client.table("bi_business_cases").select("id").eq("case_number", case_number).execute().data:
+                ts += 1
+                case_number = f"CASE-2026-{ts:06d}"
+        else:
+            case_number = self._store.generate_case_number()
 
         record = {
             "id": case_id,

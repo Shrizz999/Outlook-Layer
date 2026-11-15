@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -67,3 +68,29 @@ class BusinessCaseRead(BusinessCaseBase):
     parties: list[CasePartyRead] = Field(default_factory=list)
     links: list[CaseLinkRead] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
+
+
+class ThreeWayDiscrepancy(BaseModel):
+    field: str
+    quote_value: Any = None
+    po_value: Any = None
+    so_value: Any = None
+    discrepancy_type: str
+    severity: str  # 'CRITICAL', 'WARNING', 'INFO'
+    description: str
+
+
+class ThreeWayReconciliationRequest(BaseModel):
+    quote: dict[str, Any] | None = None
+    purchase_order: dict[str, Any] | None = None
+    sales_order: dict[str, Any] | None = None
+
+
+class ThreeWayReconciliationResult(BaseModel):
+    status: str  # 'MATCHED', 'DISCREPANCY_DETECTED', 'INCOMPLETE'
+    is_reconciled: bool
+    summary: str
+    discrepancies: list[ThreeWayDiscrepancy] = []
+    matched_fields: list[str] = []
+    recommended_action: str | None = None
+

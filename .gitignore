@@ -1,8 +1,13 @@
 # Environments and secrets
 .env
-.env.local
+.env.*
 *.env
 !.env.example
+*.pem
+*.key
+*.cert
+*.pfx
+*.p12
 
 # Python
 __pycache__/
@@ -33,8 +38,10 @@ htmlcov/
 .venv/
 venv/
 ENV/
+*.manifest
+*.spec
 
-# Node
+# Node & Frontend
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -43,14 +50,38 @@ yarn-error.log*
 dist/
 dist-ssr/
 *.local
+.eslintcache
 
-# IDE
+# IDEs & System files
 .idea/
 .vscode/
 *.swp
 *.swo
 .DS_Store
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
 
-# Temporary files
+# Logs & Runtime
+*.log
+logs/
 *.tmp
+*.bak
 scratch/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Markdown documentation files
+*.md
+*.markdown
+docs/
+
+# Training & Synthetic Data
+Train Data/
+[Tt]rain [Dd]ata/
+data/
+backend/data/
+*.eml

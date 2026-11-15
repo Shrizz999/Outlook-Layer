@@ -13,10 +13,14 @@ from app.schemas.business_case import (
     BusinessCaseRead,
     CaseLinkCreate,
     CaseLinkRead,
+    ThreeWayReconciliationRequest,
+    ThreeWayReconciliationResult,
 )
+from app.services.context.context_engine import BusinessContextEngine
 
 router = APIRouter()
 repo = BusinessCaseRepository()
+context_engine = BusinessContextEngine(case_repo=repo)
 
 
 @router.get("", response_model=list[BusinessCaseRead])
@@ -64,3 +68,13 @@ async def update_status(case_id: UUID, new_status: str = Query(...)) -> dict:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Business Case not found")
     await repo.update_case_status(case_id, new_status)
     return {"status": "updated", "case_id": str(case_id), "new_status": new_status}
+
+
+@router.post("/reconcile-3way", response_model=ThreeWayReconciliationResult)
+async def reconcile_three_way_order(req: ThreeWayReconciliationRequest) -> ThreeWayReconciliationResult:
+    return context_engine.reconcile_three_way_match(
+        quote=req.quote,
+        po=req.purchase_order,
+        so=req.sales_order,
+    )
+

@@ -1,16 +1,22 @@
 import React from 'react';
-import { ShieldCheck, UserCheck, Bell, Activity } from 'lucide-react';
-import { BIRole } from '../types';
+import { ShieldCheck, Bell, LogOut, Building2 } from 'lucide-react';
+import { UserAccount } from '../types';
 
 interface HeaderProps {
-  currentRole: BIRole;
-  onRoleChange: (role: BIRole) => void;
+  currentUser: UserAccount | null;
+  onLogout: () => void;
+  onNavigateToProfile: () => void;
   openAlertsCount: number;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentRole, onRoleChange, openAlertsCount }) => {
+export const Header: React.FC<HeaderProps> = ({
+  currentUser,
+  onLogout,
+  onNavigateToProfile,
+  openAlertsCount,
+}) => {
   return (
-    <header className="h-16 border-b border-slate-200 bg-white px-6 flex items-center justify-between sticky top-0 z-20 shadow-sm">
+    <header className="h-16 border-b border-slate-200 bg-white px-6 flex items-center justify-between sticky top-0 z-20 shadow-xs">
       <div className="flex items-center space-x-3">
         <div className="h-9 w-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold tracking-wider shadow-sm">
           BI
@@ -21,11 +27,11 @@ export const Header: React.FC<HeaderProps> = ({ currentRole, onRoleChange, openA
         </div>
       </div>
 
-      <div className="flex items-center space-x-5">
+      <div className="flex items-center space-x-4">
         {/* Safe Mode Badge */}
-        <div className="flex items-center text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+        <div className="hidden lg:flex items-center text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
           <ShieldCheck className="w-3.5 h-3.5 mr-1" />
-          <span>Additive Mode Active (Schema Protected)</span>
+          <span>RBAC Protected</span>
         </div>
 
         {/* Alerts Pill */}
@@ -41,22 +47,51 @@ export const Header: React.FC<HeaderProps> = ({ currentRole, onRoleChange, openA
           </button>
         </div>
 
-        {/* Role Selector */}
-        <div className="flex items-center space-x-2 pl-2 border-l border-slate-200">
-          <UserCheck className="w-4 h-4 text-slate-400" />
-          <span className="text-xs text-slate-500 font-medium">Role:</span>
-          <select
-            value={currentRole}
-            onChange={(e) => onRoleChange(e.target.value as BIRole)}
-            className="text-xs font-semibold bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="MANAGEMENT">Management (Cross-Dept)</option>
-            <option value="DEPT_HEAD">Department Head</option>
-            <option value="TEAM_LEADER">Team Leader</option>
-            <option value="EMPLOYEE">Employee</option>
-            <option value="SYSADMIN">System Admin</option>
-          </select>
-        </div>
+        {/* Authenticated User Profile Pill */}
+        {currentUser && (
+          <div className="flex items-center space-x-3 pl-3 border-l border-slate-200">
+            <button
+              onClick={onNavigateToProfile}
+              className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-slate-100 transition text-left group"
+              title="View your profile"
+            >
+              <div className="h-8 w-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs shadow-xs group-hover:bg-blue-500">
+                {currentUser.full_name.charAt(0)}
+              </div>
+              <div className="hidden sm:block">
+                <div className="text-xs font-bold text-slate-800 leading-tight flex items-center space-x-1">
+                  <span>{currentUser.full_name}</span>
+                  <span
+                    className={`text-[10px] font-semibold px-1.5 py-0.2 rounded ${
+                      currentUser.approved_position === 'SYSADMIN'
+                        ? 'bg-purple-100 text-purple-800'
+                        : currentUser.approved_position === 'MANAGEMENT'
+                        ? 'bg-amber-100 text-amber-800'
+                        : currentUser.approved_position === 'DEPT_HEAD'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}
+                  >
+                    {currentUser.approved_position}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-400 flex items-center space-x-1">
+                  <Building2 className="w-3 h-3 text-slate-400" />
+                  <span>{currentUser.department}</span>
+                </div>
+              </div>
+            </button>
+
+            {/* Logout Button */}
+            <button
+              onClick={onLogout}
+              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 transition"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

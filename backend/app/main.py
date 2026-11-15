@@ -37,8 +37,13 @@ async def lifespan(app: FastAPI):
         supabase_configured=settings.supabase_configured,
     )
 
+    from app.workers.outlook_sync_scheduler import OutlookSyncScheduler
+    sync_scheduler = OutlookSyncScheduler()
+    sync_scheduler.start()
+
     yield  # Application runs
 
+    sync_scheduler.stop()
     logger.info("Balbird Intelligence shutting down")
 
 
